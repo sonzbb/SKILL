@@ -26,6 +26,7 @@ while ($true) {
         if ($status.resultPath -and (Test-Path -LiteralPath $status.resultPath -PathType Leaf)) {
             $resultText = (Get-Content -LiteralPath $status.resultPath -Raw).TrimEnd([char[]]"`r`n")
         }
+        $monitor = Get-OpenCodeTaskMonitorInfo -TaskDirectory $directory -Status $status
         $result = [pscustomobject][ordered]@{
             bridgeVersion = if ($status.bridgeVersion) { $status.bridgeVersion } else { $config.bridgeVersion }
             taskId = $status.taskId
@@ -33,7 +34,10 @@ while ($true) {
             mode = $status.mode
             model = if ($status.model) { $status.model } else { $config.defaultModel }
             sessionId = $status.sessionId
-            webUrl = if ($status.sessionId) { Get-OpenCodeSessionWebUrl -ServerUrl ([string]$config.serverUrl) -Directory ([string]$status.workdir) -SessionId ([string]$status.sessionId) } else { $null }
+            webUrl = $monitor.monitorUrl
+            monitorUrl = $monitor.monitorUrl
+            monitorPath = $monitor.monitorPath
+            monitorHtmlPath = $monitor.monitorHtmlPath
             finishedAt = $status.finishedAt
             resultPath = $status.resultPath
             logPath = $status.lastLogPath

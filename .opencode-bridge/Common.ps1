@@ -36,6 +36,7 @@ function Write-TaskStatus {
     $temp = "$path.tmp"
     $Status | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temp -Encoding utf8
     Move-Item -LiteralPath $temp -Destination $path -Force
+    Update-OpenCodeTaskMonitorArtifacts -TaskDirectory $TaskDirectory -Status $Status
 }
 
 function Get-BridgeConfig {
@@ -57,6 +58,104 @@ function Get-OpenCodeSessionWebUrl {
     )
     $directoryToken = ConvertTo-OpenCodeDirectoryToken $Directory
     return $ServerUrl.TrimEnd('/') + '/' + $directoryToken + '/session/' + $SessionId
+}
+
+function Get-OpenCodeTaskMonitorMarkdownPath {
+    param([Parameter(Mandatory)][string]$TaskDirectory)
+    return Join-Path $TaskDirectory 'monitor.md'
+}
+
+function Get-OpenCodeTaskMonitorHtmlPath {
+    param([Parameter(Mandatory)][string]$TaskDirectory)
+    return Join-Path $TaskDirectory 'monitor.html'
+}
+
+function Get-OpenCodeTaskMonitorInfo {
+    param(
+        [Parameter(Mandatory)][string]$TaskDirectory,
+        [Parameter(Mandatory)][object]$Status
+    )
+    $config = Get-BridgeConfig
+    $monitorUrl = $null
+    if ($Status.sessionId -and $Status.workdir) {
+        $monitorUrl = Get-OpenCodeSessionWebUrl -ServerUrl ([string]$config.serverUrl) -Directory ([string]$Status.workdir) -SessionId ([string]$Status.sessionId)
+    }
+    return [pscustomobject]@{
+        monitorUrl = $monitorUrl
+        monitorPath = Get-OpenCodeTaskMonitorMarkdownPath -TaskDirectory $TaskDirectory
+        monitorHtmlPath = Get-OpenCodeTaskMonitorHtmlPath -TaskDirectory $TaskDirectory
+    }
+}
+
+function Update-OpenCodeTaskMonitorArtifacts {
+    param(
+        [Parameter(Mandatory)][string]$TaskDirectory,
+        [Parameter(Mandatory)][object]$Status
+    )
+    $monitor = Get-OpenCodeTaskMonitorInfo -TaskDirectory $TaskDirectory -Status $Status
+    $webUrlText = if ($monitor.monitorUrl) { [string]$monitor.monitorUrl } else { 'Pending session URL. Start the task first.' }
+    $monitorMd = @"
+# OpenCode Task Monitor
+
+- Task ID: $($Status.taskId)
+- State: $($Status.state)
+- Mode: $($Status.mode)
+- Model: $(if ($Status.model) { $Status.model } else { (Get-BridgeConfig).defaultModel })
+- Session ID: $(if ($Status.sessionId) { $Status.sessionId } else { 'Pending' })
+- Monitor URL: $webUrlText
+- Monitor HTML: $($monitor.monitorHtmlPath)
+
+## How To Use
+
+- Open the `Monitor URL` in the Codex in-app browser to watch the live OpenCode session.
+- If you prefer a local artifact, open `monitor.html` from this task directory.
+- Codex should report this monitor entry whenever a sidecar task is dispatched.
+"@
+    $monitorMd | Set-Content -LiteralPath $monitor.monitorPath -Encoding utf8
+
+    $encodedTaskId = [System.Net.WebUtility]::HtmlEncode([string]$Status.taskId)
+    $encodedState = [System.Net.WebUtility]::HtmlEncode([string]$Status.state)
+    $encodedMode = [System.Net.WebUtility]::HtmlEncode([string]$Status.mode)
+    $encodedModel = [System.Net.WebUtility]::HtmlEncode([string]$(if ($Status.model) { $Status.model } else { (Get-BridgeConfig).defaultModel }))
+    $encodedSessionId = [System.Net.WebUtility]::HtmlEncode([string]$(if ($Status.sessionId) { $Status.sessionId } else { 'Pending' }))
+    $encodedMonitorUrl = [System.Net.WebUtility]::HtmlEncode([string]$monitor.monitorUrl)
+    $iframeBlock = if ($monitor.monitorUrl) {
+@"
+<p><a href="$encodedMonitorUrl" target="_blank" rel="noopener noreferrer">Open live session directly</a></p>
+<iframe src="$encodedMonitorUrl" title="OpenCode live session"></iframe>
+"@
+    } else {
+@"
+<p>Session URL is not available yet. Start the task first, then reopen this page.</p>
+"@
+    }
+    $monitorHtml = @"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OpenCode Task Monitor - $encodedTaskId</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; color: #111; }
+    .meta { margin-bottom: 16px; }
+    .meta p { margin: 4px 0; }
+    iframe { width: 100%; height: 80vh; border: 1px solid #ccc; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>OpenCode Task Monitor</h1>
+  <div class="meta">
+    <p><strong>Task ID:</strong> $encodedTaskId</p>
+    <p><strong>State:</strong> $encodedState</p>
+    <p><strong>Mode:</strong> $encodedMode</p>
+    <p><strong>Model:</strong> $encodedModel</p>
+    <p><strong>Session ID:</strong> $encodedSessionId</p>
+  </div>
+  $iframeBlock
+</body>
+</html>
+"@
+    $monitorHtml | Set-Content -LiteralPath $monitor.monitorHtmlPath -Encoding utf8
 }
 
 function Resolve-OpenCodeTaskModel {

@@ -1,9 +1,9 @@
 ---
-name: opencode-sidecar-v2
+name: opencode-sidecar-v3
 description: Use when Codex should delegate bounded long-running, log-heavy, research, code-review, debugging, simulation, image-analysis, or repository exploration work to the configured local OpenCode sidecar while keeping Codex as planner, reviewer, and final decision-maker.
 ---
 
-# OpenCode Sidecar V2
+# OpenCode Sidecar V3
 
 This skill lets Codex keep the main reasoning loop while offloading bounded heavy work to OpenCode.
 
@@ -93,6 +93,24 @@ Assume the bridge root is the repository copy of [`.opencode-bridge`](./.opencod
 
 Use `-AuthorizeWrite` only for an explicitly approved `repo-write` invocation.
 
+## Monitoring Rule
+
+V3 requires every dispatched task to expose a visible monitor entry.
+
+After dispatch or result retrieval, capture and report:
+
+- `monitorUrl`
+- `monitorPath`
+- `monitorHtmlPath`
+
+Preferred user-facing behavior:
+
+1. give the user the canonical `monitorUrl`
+2. if the Codex browser is available, open that session there
+3. if a local artifact is easier to share, use `monitor.html`
+
+Do not only report `sessionId` and expect the user to reconstruct the URL manually.
+
 ## Waiting Rule
 
 For long work, use one local blocking wait instead of repeated Codex status queries.
@@ -101,7 +119,7 @@ For long work, use one local blocking wait instead of repeated Codex status quer
 - if a task was already started without waiting, use `Wait-OpenCodeTask.ps1`
 - use `Get-OpenCodeTaskResult.ps1` only for manual diagnosis, not as a polling loop
 
-The user can monitor the exact session in OpenCode Web while the local bridge waits.
+The user can monitor the exact session in OpenCode Web while the local bridge waits. V3 makes that easier by returning monitor fields and writing monitor artifacts for each task.
 
 ## Review Rule
 

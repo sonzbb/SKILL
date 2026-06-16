@@ -1,5 +1,5 @@
 {
-  "bridgeVersion": "2.0.0",
+  "bridgeVersion": "3.0.0",
   "taskRoot": "../.opencode-tasks",
   "defaultModel": "opencode/deepseek-v4-flash-free",
   "allowedModels": [

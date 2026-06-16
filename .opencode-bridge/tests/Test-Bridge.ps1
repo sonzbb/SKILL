@@ -46,6 +46,8 @@ Assert-True ($startTaskText -match 'Open-OpenCode\.ps1') 'Task start must recove
 Assert-True ($startTaskText -match '\[switch\]\$Wait') 'Task start must support one-call local waiting'
 $commonText = Get-Content -LiteralPath (Join-Path $bridgeRoot 'Common.ps1') -Raw
 Assert-True ($commonText -match "'/api/session'") 'Session creation must use the UTF-8-safe V2 API'
+Assert-True ($commonText -match 'monitor\.md') 'Bridge must generate a task monitor markdown artifact'
+Assert-True ($commonText -match 'monitor\.html') 'Bridge must generate a task monitor HTML artifact'
 if (Test-Path -LiteralPath $skillPath) {
     $skillText = Get-Content -LiteralPath $skillPath -Raw -Encoding utf8
     Assert-True ($skillText -match 'Start-OpenCodeTask\.ps1.*-Wait') 'Skill must use the V2 blocking wait path'
@@ -74,12 +76,12 @@ if (Test-Path -LiteralPath $bridgeConfigPath) {
     Assert-True (@($bridgeConfig.allowedModels) -contains $bridgeConfig.defaultModel) 'Default model must be in allowedModels'
     Assert-True (@($bridgeConfig.allowedModels) -contains 'opencode-go/deepseek-v4-pro') 'OpenCode Go Pro model must be allowed for future subscription use'
     Assert-True ($null -ne $bridgeConfig.allowedPassEnv) 'Bridge config must define allowedPassEnv'
-    Assert-Equal $bridgeConfig.bridgeVersion '2.0.0' 'Bridge config must identify V2'
+    Assert-Equal $bridgeConfig.bridgeVersion '3.0.0' 'Bridge config must identify V3'
     Assert-True ([int]$bridgeConfig.waitPollIntervalMilliseconds -ge 250) 'V2 wait interval must be configured'
     Assert-True ([int]$bridgeConfig.maxResultCharacters -ge 1000) 'V2 result budget must be configured'
 }
 if (Test-Path -LiteralPath $versionPath) {
-    Assert-Equal ((Get-Content -LiteralPath $versionPath -Raw).Trim()) '2.0.0' 'VERSION file must identify V2'
+    Assert-Equal ((Get-Content -LiteralPath $versionPath -Raw).Trim()) '3.0.0' 'VERSION file must identify V3'
 }
 
 if ($SchemaOnly -or $failures.Count -gt 0) {
@@ -116,7 +118,7 @@ Assert-Equal $status.state 'draft' 'New tasks start in draft state'
 Assert-Equal $status.mode 'repo-readonly' 'Task mode is persisted'
 Assert-Equal $status.model 'opencode/deepseek-v4-flash-free' 'Default model is persisted'
 Assert-Equal @($status.passEnv).Count 0 'PassEnv defaults to empty'
-Assert-Equal $status.bridgeVersion '2.0.0' 'New tasks record the V2 bridge version'
+Assert-Equal $status.bridgeVersion '3.0.0' 'New tasks record the V3 bridge version'
 $taskBrief = Get-Content -LiteralPath (Join-Path $taskRoot 'readonly-check\task.md') -Raw
 Assert-True ($taskBrief -match '6000 characters') 'V2 task brief constrains the final result size'
 Assert-True ($taskBrief -match 'conclusion first') 'V2 task brief requires conclusion-first output'
@@ -126,6 +128,8 @@ $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
 Assert-Equal $status.state 'idle' 'Successful task becomes idle and resumable'
 Assert-Equal $status.sessionId 'ses_fake_123' 'Session ID is recorded'
 Assert-True (Test-Path -LiteralPath (Join-Path $taskRoot 'readonly-check\result.md')) 'Result Markdown is written'
+Assert-True (Test-Path -LiteralPath (Join-Path $taskRoot 'readonly-check\monitor.md')) 'Task monitor markdown is written'
+Assert-True (Test-Path -LiteralPath (Join-Path $taskRoot 'readonly-check\monitor.html')) 'Task monitor HTML is written'
 
 $arguments = Get-Content -LiteralPath $fakeArgs -Raw
 Assert-True ($arguments -match '--agent repo-readonly') 'Read-only agent is selected'
@@ -204,6 +208,8 @@ Assert-Equal $resultInfo.sessionId 'ses_fake_123' 'Result reader returns session
 $directoryToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workspaceRoot)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 Assert-Equal $resultInfo.webUrl "http://127.0.0.1:4096/$directoryToken/session/ses_fake_123" 'Result reader returns the canonical project session URL'
 Assert-Equal $resultInfo.model 'opencode/deepseek-v4-flash-free' 'Result reader returns the task model'
+Assert-True ($resultInfo.monitorPath -match 'monitor\.md$') 'Result reader returns the task monitor markdown path'
+Assert-True ($resultInfo.monitorHtmlPath -match 'monitor\.html$') 'Result reader returns the task monitor HTML path'
 
 $listedTasks = & $listTasks -TaskRoot $taskRoot -Json | ConvertFrom-Json
 $listedReadonly = @($listedTasks) | Where-Object { $_.taskId -eq 'readonly-check' } | Select-Object -First 1
@@ -216,6 +222,8 @@ $backgroundStatusPath = Join-Path $taskRoot 'background-check\status.json'
 $waitedBackground = & $waitTask -TaskId 'background-check' -TaskRoot $taskRoot -TimeoutSeconds 10 -PollIntervalMilliseconds 100
 Assert-Equal $waitedBackground.state 'idle' 'Local waiter observes background completion'
 Assert-Equal $waitedBackground.result 'FAKE_RESULT' 'Local waiter returns the final concise result once'
+Assert-True ($waitedBackground.monitorPath -match 'monitor\.md$') 'Local waiter returns the monitor markdown path'
+Assert-True ($waitedBackground.monitorHtmlPath -match 'monitor\.html$') 'Local waiter returns the monitor HTML path'
 Assert-True (Test-Path -LiteralPath (Join-Path $taskRoot 'background-check\background.stderr.log')) 'Background stderr log is retained'
 $backgroundArguments = Get-Content -LiteralPath $fakeArgs | Where-Object { $_ -match '--agent research' } | Select-Object -Last 1
 Assert-True ($backgroundArguments -match ('--dir ' + [regex]::Escape($workspaceRoot))) 'Research sessions belong to the requested project directory for Web visibility'

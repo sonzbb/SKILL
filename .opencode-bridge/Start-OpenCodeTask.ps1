@@ -63,6 +63,9 @@ $queuedResult = [pscustomobject]@{
     processId = $process.Id
     sessionId = $status.sessionId
     webUrl = $status.webUrl
+    monitorUrl = (Get-OpenCodeTaskMonitorInfo -TaskDirectory $directory -Status $status).monitorUrl
+    monitorPath = (Get-OpenCodeTaskMonitorInfo -TaskDirectory $directory -Status $status).monitorPath
+    monitorHtmlPath = (Get-OpenCodeTaskMonitorInfo -TaskDirectory $directory -Status $status).monitorHtmlPath
     monitorProcessId = $status.monitorProcessId
     monitorType = $status.monitorType
 }

@@ -1,4 +1,4 @@
-# OpenCode Sidecar V2
+# OpenCode Sidecar V3
 
 Codex uses this bridge to delegate bounded work to OpenCode while retaining planning, review, and final decision responsibility.
 
@@ -42,7 +42,27 @@ The dedicated `opencode-config/opencode.json` denies unspecified permissions glo
 
 Sessions use the task's project directory so they appear together in the OpenCode Web project view. Research workers still cannot read project files because their agent permissions deny file and shell tools.
 
-`Start-OpenCodeTask.ps1` creates the server session before execution and opens that exact session in the OpenCode Web UI. V2 adds `-Wait`: OpenCode keeps working in the background while one local PowerShell process waits silently and returns only the terminal result. Pass `-NoMonitor` only when a silent background run is explicitly required.
+`Start-OpenCodeTask.ps1` creates the server session before execution and opens that exact session in the OpenCode Web UI. V3 keeps the V2 one-call waiting flow and adds task-level monitor artifacts so Codex can hand the user a stable monitoring entry instead of only mentioning a session ID. Pass `-NoMonitor` only when a silent background run is explicitly required.
+
+## V3 Monitoring
+
+Each task now generates:
+
+- `monitor.md` - a compact task monitor note with task ID, state, session ID, and live URL
+- `monitor.html` - a browser-friendly local page that links to, and attempts to embed, the live OpenCode session
+
+Bridge results now return:
+
+- `monitorUrl` - canonical OpenCode session URL
+- `monitorPath` - local `monitor.md`
+- `monitorHtmlPath` - local `monitor.html`
+
+The intended Codex-side behavior is:
+
+- dispatch the worker
+- return the `monitorUrl` to the user immediately
+- optionally open that session in the Codex in-app browser
+- use `monitor.html` when a local monitor artifact is easier to share than the raw URL
 
 OpenCode 1.17.x session pages use `/<base64url-directory>/session/<session-id>`. The bridge creates sessions through `/api/session` with a UTF-8 JSON location so non-ASCII Windows paths stay attached to the correct Web project instead of falling back to `global`.
 
@@ -61,7 +81,7 @@ For an already-started task, wait without creating external status checks:
 .\.opencode-bridge\Wait-OpenCodeTask.ps1 -TaskId review-auth
 ```
 
-`Get-OpenCodeTaskResult.ps1` remains available for manual diagnosis. It is not the normal waiting loop in V2. New task briefs require conclusion-first reports below `maxResultCharacters` and ask the worker to cite log paths instead of copying large logs into `result.md`.
+`Get-OpenCodeTaskResult.ps1` remains available for manual diagnosis. It is not the normal waiting loop in V3. New task briefs require conclusion-first reports below `maxResultCharacters` and ask the worker to cite log paths instead of copying large logs into `result.md`.
 
 If a restricted Windows process fails before invocation logging with `EEXIST` or access denied for the OpenCode profile directory, rerun the same task under normal user permission with `-Retry -Wait`. This reuses the existing task and Web session.
 

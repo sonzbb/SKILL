@@ -20,13 +20,17 @@ if (-not (Test-Path -LiteralPath $root -PathType Container)) {
             return
         }
         if ($State -and $status.state -ne $State) { return }
+        $monitor = Get-OpenCodeTaskMonitorInfo -TaskDirectory $_.FullName -Status $status
         [pscustomobject][ordered]@{
             taskId = $status.taskId
             state = $status.state
             mode = $status.mode
             model = if ($status.model) { $status.model } else { $config.defaultModel }
             sessionId = $status.sessionId
-            webUrl = if ($status.sessionId) { Get-OpenCodeSessionWebUrl -ServerUrl ([string]$config.serverUrl) -Directory ([string]$status.workdir) -SessionId ([string]$status.sessionId) } else { $null }
+            webUrl = $monitor.monitorUrl
+            monitorUrl = $monitor.monitorUrl
+            monitorPath = $monitor.monitorPath
+            monitorHtmlPath = $monitor.monitorHtmlPath
             createdAt = $status.createdAt
             finishedAt = $status.finishedAt
             resultPath = $status.resultPath
