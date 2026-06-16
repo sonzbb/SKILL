@@ -1,0 +1,11 @@
+.opencode-tasks/
+.opencode-tasks-test-*/
+.validator-deps/
+车辆数据/
+
+.codex-tools/logs/
+.codex-tools/python3
+
+.opencode-bridge/opencode-config/node_modules/
+
+*.log

@@ -1,0 +1,23 @@
+{
+  "bridgeVersion": "2.0.0",
+  "taskRoot": "../.opencode-tasks",
+  "defaultModel": "opencode/deepseek-v4-flash-free",
+  "allowedModels": [
+    "opencode/deepseek-v4-flash-free",
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/deepseek-v4-flash",
+    "deepseek/deepseek-v4-pro",
+    "deepseek/deepseek-v4-flash"
+  ],
+  "allowedPassEnv": [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY"
+  ],
+  "serverUrl": "http://127.0.0.1:4096",
+  "serverHost": "127.0.0.1",
+  "serverPort": 4096,
+  "defaultTimeoutSeconds": 1800,
+  "waitPollIntervalMilliseconds": 1000,
+  "maxResultCharacters": 6000
+}
