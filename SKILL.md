@@ -111,6 +111,32 @@ Preferred user-facing behavior:
 
 Do not only report `sessionId` and expect the user to reconstruct the URL manually.
 
+## Dispatch Reply Template
+
+After dispatching a sidecar task, Codex should reply with a short monitor-first status update. Use this shape:
+
+```text
+结论：任务已经交给 sidecar。
+
+- Task ID: <task-id>
+- Mode: <mode>
+- Model: <model>
+- Session ID: <session-id>
+- 监控链接: <monitorUrl>
+- 本地监控页: <monitorHtmlPath>
+- 结果文件: <resultPath or pending>
+
+你现在可以直接打开监控链接，在 Codex 右侧浏览器里实时看 sidecar 在做什么。
+```
+
+Rules:
+
+- always include `monitorUrl`
+- include `monitorHtmlPath` when available
+- do not reply with only `sessionId`
+- keep the update short and operational
+- if the browser is available, prefer opening the monitor link there
+
 ## Waiting Rule
 
 For long work, use one local blocking wait instead of repeated Codex status queries.

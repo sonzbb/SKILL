@@ -22,6 +22,8 @@ if (Test-Path -LiteralPath $skillFile) {
     }
     Assert-True ($text -match 'AuthorizeWrite') 'One-time write authorization is not documented'
     Assert-True ($text -match 'Resume-OpenCodeTask') 'Session resume workflow is missing'
+    Assert-True ($text -match 'monitorUrl') 'Global skill must require returning monitorUrl after dispatch'
+    Assert-True ($text -match 'monitorHtmlPath') 'Global skill must mention the local monitor artifact'
     Assert-True ($text -notmatch 'sk-[A-Za-z0-9]{20,}') 'Skill contains an API-key-like value'
     Assert-True ($text -notmatch 'deepseek-v[0-9]') 'Skill hard-codes a model ID'
 }

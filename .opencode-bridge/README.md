@@ -64,6 +64,28 @@ The intended Codex-side behavior is:
 - optionally open that session in the Codex in-app browser
 - use `monitor.html` when a local monitor artifact is easier to share than the raw URL
 
+## Recommended Reply Template
+
+When Codex dispatches a sidecar task, the user-facing reply should include the monitor entry immediately instead of only mentioning that a worker was started.
+
+Recommended shape:
+
+```text
+结论：任务已经交给 sidecar。
+
+- Task ID: <task-id>
+- Mode: <mode>
+- Model: <model>
+- Session ID: <session-id>
+- 监控链接: <monitorUrl>
+- 本地监控页: <monitorHtmlPath>
+- 结果文件: <resultPath or pending>
+
+你现在可以直接打开监控链接，在 Codex 右侧浏览器里实时看 sidecar 在做什么。
+```
+
+This is the default V3 communication contract. The user should not need to reconstruct a session URL manually.
+
 OpenCode 1.17.x session pages use `/<base64url-directory>/session/<session-id>`. The bridge creates sessions through `/api/session` with a UTF-8 JSON location so non-ASCII Windows paths stay attached to the correct Web project instead of falling back to `global`.
 
 Before creating a session, task startup checks the configured Web server and automatically restarts it when it is unavailable.
