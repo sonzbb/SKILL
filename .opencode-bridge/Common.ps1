@@ -44,6 +44,46 @@ function Get-BridgeConfig {
     return Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 }
 
+function Get-OpenCodeRuntimeEnvironment {
+    return [pscustomobject]@{
+        XDG_CONFIG_HOME = Join-Path $PSScriptRoot '.runtime-config'
+        XDG_DATA_HOME = Join-Path $PSScriptRoot '.runtime-data'
+        XDG_STATE_HOME = Join-Path $PSScriptRoot '.runtime-state'
+        OPENCODE_CONFIG = Join-Path $PSScriptRoot 'opencode-config\opencode.json'
+        OPENCODE_CONFIG_DIR = Join-Path $PSScriptRoot 'opencode-config'
+    }
+}
+
+function Set-OpenCodeRuntimeEnvironment {
+    $runtime = Get-OpenCodeRuntimeEnvironment
+    foreach ($path in @($runtime.XDG_CONFIG_HOME, $runtime.XDG_DATA_HOME, $runtime.XDG_STATE_HOME, $runtime.OPENCODE_CONFIG_DIR)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Container)) {
+            New-Item -ItemType Directory -Path $path | Out-Null
+        }
+    }
+    $previous = [pscustomobject]@{
+        XDG_CONFIG_HOME = [Environment]::GetEnvironmentVariable('XDG_CONFIG_HOME', 'Process')
+        XDG_DATA_HOME = [Environment]::GetEnvironmentVariable('XDG_DATA_HOME', 'Process')
+        XDG_STATE_HOME = [Environment]::GetEnvironmentVariable('XDG_STATE_HOME', 'Process')
+        OPENCODE_CONFIG = [Environment]::GetEnvironmentVariable('OPENCODE_CONFIG', 'Process')
+        OPENCODE_CONFIG_DIR = [Environment]::GetEnvironmentVariable('OPENCODE_CONFIG_DIR', 'Process')
+    }
+    [Environment]::SetEnvironmentVariable('XDG_CONFIG_HOME', [string]$runtime.XDG_CONFIG_HOME, 'Process')
+    [Environment]::SetEnvironmentVariable('XDG_DATA_HOME', [string]$runtime.XDG_DATA_HOME, 'Process')
+    [Environment]::SetEnvironmentVariable('XDG_STATE_HOME', [string]$runtime.XDG_STATE_HOME, 'Process')
+    [Environment]::SetEnvironmentVariable('OPENCODE_CONFIG', [string]$runtime.OPENCODE_CONFIG, 'Process')
+    [Environment]::SetEnvironmentVariable('OPENCODE_CONFIG_DIR', [string]$runtime.OPENCODE_CONFIG_DIR, 'Process')
+    return $previous
+}
+
+function Restore-OpenCodeRuntimeEnvironment {
+    param([Parameter(Mandatory)][object]$Previous)
+    foreach ($name in @('XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR')) {
+        $value = $Previous.$name
+        [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+    }
+}
+
 function ConvertTo-OpenCodeDirectoryToken {
     param([Parameter(Mandatory)][string]$Directory)
     $bytes = [System.Text.Encoding]::UTF8.GetBytes([System.IO.Path]::GetFullPath($Directory))
@@ -353,10 +393,7 @@ function Invoke-OpenCodeWorker {
         $arguments += @('--attach', [string]$config.serverUrl)
     }
 
-    $oldConfig = $env:OPENCODE_CONFIG
-    $oldConfigDir = $env:OPENCODE_CONFIG_DIR
-    $env:OPENCODE_CONFIG = Join-Path $PSScriptRoot 'opencode-config\opencode.json'
-    $env:OPENCODE_CONFIG_DIR = Join-Path $PSScriptRoot 'opencode-config'
+    $previousRuntimeEnv = Set-OpenCodeRuntimeEnvironment
     try {
         Push-Location $runDirectory
         try {
@@ -367,8 +404,7 @@ function Invoke-OpenCodeWorker {
             Pop-Location
         }
     } finally {
-        $env:OPENCODE_CONFIG = $oldConfig
-        $env:OPENCODE_CONFIG_DIR = $oldConfigDir
+        Restore-OpenCodeRuntimeEnvironment $previousRuntimeEnv
     }
 
     $logPath = Join-Path $TaskDirectory ('invocation-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.jsonl')

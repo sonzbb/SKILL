@@ -14,9 +14,9 @@ Assert-True (Test-Path -LiteralPath $skillFile) 'Global opencode-sidecar SKILL.m
 Assert-True (Test-Path -LiteralPath $agentFile) 'Global opencode-sidecar agents/openai.yaml is missing'
 
 if (Test-Path -LiteralPath $skillFile) {
-    $text = Get-Content -LiteralPath $skillFile -Raw
+    $text = Get-Content -LiteralPath $skillFile -Raw -Encoding utf8
     Assert-True ($text -match 'name:\s*opencode-sidecar') 'Skill name is incorrect'
-    Assert-True ($text -match 'D:\\CODEX项目\\\.opencode-bridge') 'Bridge path is missing'
+    Assert-True ($text -match [regex]::Escape($bridgeRoot)) 'Bridge path is missing'
     foreach ($mode in @('research', 'repo-readonly', 'repo-write')) {
         Assert-True ($text -match [regex]::Escape($mode)) "Missing mode guidance: $mode"
     }

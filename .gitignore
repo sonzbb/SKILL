@@ -7,5 +7,8 @@
 .codex-tools/python3
 
 .opencode-bridge/opencode-config/node_modules/
+.opencode-bridge/.runtime-config/
+.opencode-bridge/.runtime-data/
+.opencode-bridge/.runtime-state/
 
 *.log

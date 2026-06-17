@@ -48,6 +48,9 @@ $commonText = Get-Content -LiteralPath (Join-Path $bridgeRoot 'Common.ps1') -Raw
 Assert-True ($commonText -match "'/api/session'") 'Session creation must use the UTF-8-safe V2 API'
 Assert-True ($commonText -match 'monitor\.md') 'Bridge must generate a task monitor markdown artifact'
 Assert-True ($commonText -match 'monitor\.html') 'Bridge must generate a task monitor HTML artifact'
+Assert-True ($commonText -match 'XDG_CONFIG_HOME') 'Bridge must isolate OpenCode runtime config away from the user profile'
+Assert-True ($commonText -match 'XDG_DATA_HOME') 'Bridge must isolate OpenCode runtime data and logs away from the user profile'
+Assert-True ($commonText -match 'XDG_STATE_HOME') 'Bridge must isolate OpenCode runtime state away from the user profile'
 if (Test-Path -LiteralPath $skillPath) {
     $skillText = Get-Content -LiteralPath $skillPath -Raw -Encoding utf8
     Assert-True ($skillText -match 'Start-OpenCodeTask\.ps1.*-Wait') 'Skill must use the V2 blocking wait path'
@@ -102,7 +105,7 @@ $escapedFakeArgs = $fakeArgs.Replace("'", "''")
 $escapedFakeEnv = $fakeEnv.Replace("'", "''")
 @"
 (`$args -join ' ') | Add-Content -LiteralPath '$escapedFakeArgs' -Encoding utf8
-(`$env:OPENCODE_CONFIG + '|' + `$env:OPENCODE_CONFIG_DIR + '|HTTP_PROXY=' + `$env:HTTP_PROXY) | Add-Content -LiteralPath '$escapedFakeEnv' -Encoding utf8
+(`$env:OPENCODE_CONFIG + '|' + `$env:OPENCODE_CONFIG_DIR + '|XDG_CONFIG_HOME=' + `$env:XDG_CONFIG_HOME + '|XDG_DATA_HOME=' + `$env:XDG_DATA_HOME + '|XDG_STATE_HOME=' + `$env:XDG_STATE_HOME + '|HTTP_PROXY=' + `$env:HTTP_PROXY) | Add-Content -LiteralPath '$escapedFakeEnv' -Encoding utf8
 `$sessionId = 'ses_fake_123'
 `$sessionIndex = [Array]::IndexOf(`$args, '--session')
 if (`$sessionIndex -ge 0) { `$sessionId = `$args[`$sessionIndex + 1] }
@@ -137,6 +140,9 @@ Assert-True ($arguments -match '--file') 'Task Markdown is attached'
 $environment = Get-Content -LiteralPath $fakeEnv -Raw
 Assert-True ($environment -match [regex]::Escape($openCodeConfig)) 'Worker receives the dedicated OpenCode config path'
 Assert-True ($environment -match [regex]::Escape((Join-Path $bridgeRoot 'opencode-config'))) 'Worker receives the custom agents directory'
+Assert-True ($environment -match [regex]::Escape((Join-Path $bridgeRoot '.runtime-config'))) 'Worker receives the isolated runtime config directory'
+Assert-True ($environment -match [regex]::Escape((Join-Path $bridgeRoot '.runtime-data'))) 'Worker receives the isolated runtime data directory'
+Assert-True ($environment -match [regex]::Escape((Join-Path $bridgeRoot '.runtime-state'))) 'Worker receives the isolated runtime state directory'
 
 & $newTask -TaskId 'model-check' -Goal 'Use an allowed model.' -Mode 'research' -Model 'deepseek/deepseek-v4-pro' -TaskRoot $taskRoot -Workdir $workspaceRoot -ExternalDisclosureApproval yes | Out-Null
 & $invokeTask -TaskId 'model-check' -TaskRoot $taskRoot -OpenCodePath $fakeCli -NoServer | Out-Null

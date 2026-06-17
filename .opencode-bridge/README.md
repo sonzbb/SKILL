@@ -40,6 +40,8 @@ This policy may mention preferred models that are not yet configured in `config.
 
 The dedicated `opencode-config/opencode.json` denies unspecified permissions globally, then the Markdown agents under `opencode-config/agents/` allow only each mode's required tools. The launch and worker scripts inject both `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`. These are guardrails, not an operating-system sandbox; Codex must still review task scope and results.
 
+The bridge also sets `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and `XDG_STATE_HOME` to bridge-owned runtime directories. This keeps OpenCode Web startup, local databases, locks, and logs away from the user's normal OpenCode profile, avoiding Windows profile errors such as `EEXIST` on `C:\Users\Administrator\.config\opencode` or log-open failures under `C:\Users\Administrator\.local\share\opencode`.
+
 Sessions use the task's project directory so they appear together in the OpenCode Web project view. Research workers still cannot read project files because their agent permissions deny file and shell tools.
 
 `Start-OpenCodeTask.ps1` creates the server session before execution and opens that exact session in the OpenCode Web UI. V3 keeps the V2 one-call waiting flow and adds task-level monitor artifacts so Codex can hand the user a stable monitoring entry instead of only mentioning a session ID. Pass `-NoMonitor` only when a silent background run is explicitly required.
@@ -61,7 +63,8 @@ The intended Codex-side behavior is:
 
 - dispatch the worker
 - return the `monitorUrl` to the user immediately
-- optionally open that session in the Codex in-app browser
+- open that session in the Codex in-app browser when browser control is available
+- otherwise ask the user to click the `monitorUrl` in the reply or paste it into the right-side browser tab
 - use `monitor.html` when a local monitor artifact is easier to share than the raw URL
 
 ## Recommended Reply Template
@@ -105,7 +108,25 @@ For an already-started task, wait without creating external status checks:
 
 `Get-OpenCodeTaskResult.ps1` remains available for manual diagnosis. It is not the normal waiting loop in V3. New task briefs require conclusion-first reports below `maxResultCharacters` and ask the worker to cite log paths instead of copying large logs into `result.md`.
 
-If a restricted Windows process fails before invocation logging with `EEXIST` or access denied for the OpenCode profile directory, rerun the same task under normal user permission with `-Retry -Wait`. This reuses the existing task and Web session.
+If OpenCode Web is not running, `Start-OpenCodeTask.ps1` calls `Open-OpenCode.ps1 -Web` automatically before it creates the task session. If a restricted Windows process still fails before invocation logging, rerun the same task under normal user permission with `-Retry -Wait`. This reuses the existing task and Web session.
+
+## Inspecting Past Tasks
+
+Use the task list when the Web UI does not show the project you expect:
+
+```powershell
+.\.opencode-bridge\List-OpenCodeTasks.ps1
+```
+
+Each task has a folder under `.opencode-tasks/<task-id>/`:
+
+- `task.md` - the exact brief Codex gave to OpenCode
+- `status.json` - state, model, workdir, session ID, Web URL, and log path
+- `monitor.md` / `monitor.html` - the live monitoring entry
+- `result.md` - the final worker report
+- `session.json` and `invocation-*.jsonl` - detailed session or CLI evidence when available
+
+If the browser opens `http://127.0.0.1:4096/` and appears empty, open the task's `monitorUrl` instead. OpenCode routes sessions by encoded project directory, so a task created for another workdir will not necessarily appear under the current project card.
 
 The configured default model is used unless the task selects another allowed model:
 

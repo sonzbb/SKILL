@@ -1,5 +1,5 @@
 ---
-name: opencode-sidecar-v3
+name: opencode-sidecar
 description: Use when Codex should delegate bounded long-running, log-heavy, research, code-review, debugging, simulation, image-analysis, or repository exploration work to the configured local OpenCode sidecar while keeping Codex as planner, reviewer, and final decision-maker.
 ---
 
@@ -7,7 +7,7 @@ description: Use when Codex should delegate bounded long-running, log-heavy, res
 
 This skill lets Codex keep the main reasoning loop while offloading bounded heavy work to OpenCode.
 
-Human-facing overview lives in [README.md](./README.md).  
+Human-facing overview lives in [README.md](./README.md).
 Bridge implementation lives in [`.opencode-bridge/`](./.opencode-bridge/).
 
 ## Core Rule
@@ -72,6 +72,10 @@ Assume the bridge root is the repository copy of [`.opencode-bridge`](./.opencod
 & '.\.opencode-bridge\Open-OpenCode.ps1' -Web
 ```
 
+`Start-OpenCodeTask.ps1` also performs this startup automatically when the server is unavailable. The bridge sets OpenCode's runtime config, data, state, and log locations to bridge-owned directories so startup does not depend on the user's normal OpenCode profile.
+
+If a restricted Windows process still fails before invocation logging, for example with `EEXIST` or access denied around the OpenCode profile, retry the same task once with `Start-OpenCodeTask.ps1 -TaskId '<task-id>' -Retry -Wait`. Reuse the existing task and session; do not create a replacement task just to recover startup.
+
 2. Create a task with a narrow, explicit goal:
 
 ```powershell
@@ -107,7 +111,8 @@ Preferred user-facing behavior:
 
 1. give the user the canonical `monitorUrl`
 2. if the Codex browser is available, open that session there
-3. if a local artifact is easier to share, use `monitor.html`
+3. if browser control is unavailable, tell the user to click the `monitorUrl` or paste it into the right-side Codex browser tab
+4. if a local artifact is easier to share, use `monitor.html`
 
 Do not only report `sessionId` and expect the user to reconstruct the URL manually.
 
@@ -117,7 +122,6 @@ After dispatching a sidecar task, Codex should reply with a short monitor-first 
 
 ```text
 结论：任务已经交给 sidecar。
-
 - Task ID: <task-id>
 - Mode: <mode>
 - Model: <model>
@@ -136,6 +140,7 @@ Rules:
 - do not reply with only `sessionId`
 - keep the update short and operational
 - if the browser is available, prefer opening the monitor link there
+- if the browser cannot be controlled from Codex, say that plainly and return the clickable monitor link
 
 ## Waiting Rule
 

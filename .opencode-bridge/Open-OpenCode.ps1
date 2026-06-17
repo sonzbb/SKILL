@@ -25,15 +25,11 @@ function Start-OpenCodeCliProcess {
 
 if ($Web -and -not (Test-OpenCodeServer ([string]$config.serverUrl))) {
     $webArgs = @('web', '--hostname', [string]$config.serverHost, '--port', [string]$config.serverPort)
-    $oldConfig = $env:OPENCODE_CONFIG
-    $oldConfigDir = $env:OPENCODE_CONFIG_DIR
-    $env:OPENCODE_CONFIG = Join-Path $PSScriptRoot 'opencode-config\opencode.json'
-    $env:OPENCODE_CONFIG_DIR = Join-Path $PSScriptRoot 'opencode-config'
+    $previousRuntimeEnv = Set-OpenCodeRuntimeEnvironment
     try {
         Start-OpenCodeCliProcess -Arguments $webArgs | Out-Null
     } finally {
-        $env:OPENCODE_CONFIG = $oldConfig
-        $env:OPENCODE_CONFIG_DIR = $oldConfigDir
+        Restore-OpenCodeRuntimeEnvironment $previousRuntimeEnv
     }
     $ready = $false
     foreach ($attempt in 1..40) {

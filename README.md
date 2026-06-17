@@ -120,6 +120,10 @@ V3 新增了稳定的监控返回约定。
 - `monitorHtmlPath`
 - `resultPath`
 
+如果 OpenCode Web 没有运行，V3 的 `Start-OpenCodeTask.ps1` 会先自动启动本机 Web 服务。桥接器会把 OpenCode 的配置、数据、状态和日志隔离到 `.opencode-bridge` 自己的运行目录，避免撞到用户目录里的旧配置或权限问题。
+
+如果 Codex 当前可以控制右侧内置浏览器，派发后应直接把右侧浏览器打开到 `monitorUrl`。如果浏览器控制不可用，Codex 至少必须把 `monitorUrl` 作为可点击链接返回；你点击它或粘贴到右侧浏览器，就能看到 sidecar 的实时会话。
+
 推荐回复模板：
 
 ```text
@@ -135,6 +139,8 @@ V3 新增了稳定的监控返回约定。
 
 你现在可以直接打开监控链接，在 Codex 右侧浏览器里实时看 sidecar 在做什么。
 ```
+
+历史任务可以用 `.opencode-bridge\List-OpenCodeTasks.ps1` 查看。每个任务目录里会保留 `task.md`、`status.json`、`monitor.md`、`monitor.html`、`result.md` 和必要的日志，所以即使 Web 项目页没显示出来，也能翻查“这次到底给 OpenCode 派了什么、它跑到哪、结果在哪里”。
 
 ## 仓库结构
 
